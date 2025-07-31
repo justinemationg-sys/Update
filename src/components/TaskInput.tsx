@@ -210,13 +210,7 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
       errors.push('Task title must be 100 characters or less');
     }
     
-    if (!isDeadlineValid) {
-      if (formData.deadlineType === 'hard') {
-        errors.push('Deadline date is required');
-      } else if (formData.deadlineType === 'soft') {
-        errors.push('Target date is required');
-      }
-    } else if (!isDeadlineNotPast) {
+    if (!isDeadlineNotPast) {
       errors.push('Date cannot be in the past');
     }
     
