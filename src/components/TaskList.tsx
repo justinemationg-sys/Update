@@ -90,17 +90,30 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask, 
 
   const startEditing = (task: Task) => {
     setEditingTaskId(task.id);
+    const totalMinutes = Math.round((task.estimatedHours || 0) * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
     setEditFormData({
       title: task.title,
       description: task.description,
       deadline: task.deadline,
       importance: task.importance,
-      estimatedHours: task.estimatedHours,
+      estimatedHours: hours,
+      estimatedMinutes: minutes,
       subject: task.subject,
-      category: task.category, // Added
-      // distributionStrategy: task.distributionStrategy || 'even', // Removed
-      // evenDistribution: !task.distributionStrategy || task.distributionStrategy === 'even', // Removed
+      category: task.category === 'Custom...' ? '' : task.category,
+      customCategory: task.category && !['Academics', 'Org', 'Work', 'Personal', 'Health', 'Learning', 'Finance', 'Home'].includes(task.category) ? task.category : '',
+      impact: task.impact || (task.importance ? 'high' : 'low'),
+      taskType: task.taskType || '',
+      deadlineType: task.deadlineType || (task.deadline ? 'hard' : 'none'),
+      schedulingPreference: task.schedulingPreference || 'consistent',
+      targetFrequency: task.targetFrequency || 'weekly',
+      preferredTimeSlots: task.preferredTimeSlots || [],
+      minWorkBlock: task.minWorkBlock || 30,
+      isOneTimeTask: task.isOneTimeTask || false,
     });
+    setShowAdvancedOptions(false);
   };
 
   const saveEdit = () => {
