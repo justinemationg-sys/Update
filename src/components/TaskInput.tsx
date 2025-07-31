@@ -294,6 +294,7 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
       targetFrequency: 'weekly',
       preferredTimeSlots: [],
       minWorkBlock: 30,
+      isOneTimeTask: false,
     });
     setShowEstimationHelper(false);
     setShowMoreOptions(false);
