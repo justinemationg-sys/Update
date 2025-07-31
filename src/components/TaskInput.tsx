@@ -208,9 +208,13 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
     }
     
     if (!isDeadlineValid) {
-      errors.push('Deadline');
+      if (formData.deadlineType === 'hard') {
+        errors.push('Deadline date is required');
+      } else if (formData.deadlineType === 'soft') {
+        errors.push('Target date is required');
+      }
     } else if (!isDeadlineNotPast) {
-      errors.push('Deadline cannot be in the past');
+      errors.push('Date cannot be in the past');
     }
     
     if (!isEstimatedValid) {
