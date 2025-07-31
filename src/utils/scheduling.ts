@@ -980,6 +980,45 @@ export const generateNewStudyPlan = (
       }
     }
 
+    // Schedule no-deadline tasks in remaining available time
+    if (noDeadlineTasksBalanced.length > 0) {
+      // Simple scheduling for no-deadline tasks in balanced mode
+      noDeadlineTasksBalanced.forEach(task => {
+        let remainingHours = task.estimatedHours;
+        const minSessionHours = (task.minWorkBlock || 30) / 60;
+        let sessionNumber = 1;
+
+        for (const plan of studyPlans) {
+          if (remainingHours <= 0) break;
+
+          const usedHours = plan.plannedTasks.reduce((sum, session) => sum + session.allocatedHours, 0);
+          const availableHours = plan.availableHours - usedHours;
+
+          if (availableHours >= minSessionHours) {
+            const sessionHours = Math.min(remainingHours, availableHours, 1.5); // Max 1.5 hours per session
+
+            const startTimeHour = 9 + (usedHours % 8);
+            const endTimeHour = startTimeHour + sessionHours;
+
+            const session: StudySession = {
+              taskId: task.id,
+              scheduledTime: plan.date,
+              startTime: `${Math.floor(startTimeHour).toString().padStart(2, '0')}:${((startTimeHour % 1) * 60).toString().padStart(2, '0')}`,
+              endTime: `${Math.floor(endTimeHour).toString().padStart(2, '0')}:${((endTimeHour % 1) * 60).toString().padStart(2, '0')}`,
+              allocatedHours: sessionHours,
+              sessionNumber,
+              isFlexible: true
+            };
+
+            plan.plannedTasks.push(session);
+            plan.totalStudyHours += sessionHours;
+            remainingHours -= sessionHours;
+            sessionNumber++;
+          }
+        }
+      });
+    }
+
     // Create suggestions for any unscheduled hours
     const suggestions = getUnscheduledMinutesForTasks(prioritizedTasks,
       prioritizedTasks.reduce((acc, task) => {
