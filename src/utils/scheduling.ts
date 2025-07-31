@@ -1032,12 +1032,23 @@ export const generateNewStudyPlan = (
   }
 
   // Step 1: Filter and sort tasks by Eisenhower Matrix logic
-  const tasksSorted = tasks
-    .filter(task => task.status === 'pending' && task.estimatedHours > 0)
+  const allPendingTasksEisen = tasks.filter(task => task.status === 'pending' && task.estimatedHours > 0);
+
+  const deadlineTasksEisen = allPendingTasksEisen
+    .filter(task => !task.deadlineType || task.deadlineType !== 'none')
     .sort((a, b) => {
       if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
       return new Date(a.deadline).getTime() - new Date(b.deadline).getTime(); // Then by deadline
     });
+
+  const noDeadlineTasksEisen = allPendingTasksEisen
+    .filter(task => task.deadlineType === 'none')
+    .sort((a, b) => {
+      if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
+      return a.title.localeCompare(b.title); // Then alphabetically
+    });
+
+  const tasksSorted = deadlineTasksEisen;
 
   // Step 2: Create a map of available study days (using same logic as even mode)
   const now = new Date();
