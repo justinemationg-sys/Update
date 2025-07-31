@@ -252,14 +252,14 @@ export const generateNewStudyPlan = (
     const allPendingTasks = tasks.filter(task => task.status === 'pending' && task.estimatedHours > 0);
 
     const deadlineTasks = allPendingTasks
-      .filter(task => !task.deadlineType || task.deadlineType !== 'none')
+      .filter(task => task.deadline && task.deadline.trim().length > 0 && task.deadlineType !== 'none')
       .sort((a, b) => {
         if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime(); // Then by deadline (earlier = more urgent)
       });
 
     const noDeadlineTasks = allPendingTasks
-      .filter(task => task.deadlineType === 'none')
+      .filter(task => !task.deadline || task.deadline.trim().length === 0 || task.deadlineType === 'none')
       .sort((a, b) => {
         if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
         return a.title.localeCompare(b.title); // Then alphabetically
