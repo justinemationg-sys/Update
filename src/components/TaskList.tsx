@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Edit, Trash2, CheckCircle2, X, Info } from 'lucide-react';
+import { BookOpen, Edit, Trash2, CheckCircle2, X, Info, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 import { Task } from '../types';
 import { formatTime } from '../utils/scheduling';
 
@@ -12,14 +12,24 @@ interface TaskListProps {
 }
 
 type EditFormData = Partial<Task> & {
-  // evenDistribution: boolean; // Removed
-  // frontOrBack: 'front-load' | 'back-load'; // Removed
+  estimatedMinutes?: number;
+  customCategory?: string;
+  impact?: string;
+  taskType?: string;
+  deadlineType?: 'hard' | 'soft' | 'none';
+  schedulingPreference?: 'consistent' | 'opportunistic' | 'intensive';
+  targetFrequency?: 'daily' | 'weekly' | '3x-week' | 'flexible';
+  preferredTimeSlots?: ('morning' | 'afternoon' | 'evening')[];
+  minWorkBlock?: number;
+  isOneTimeTask?: boolean;
 };
 
 const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask, autoRemovedTasks = [], onDismissAutoRemovedTask }) => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<EditFormData>({});
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = new Date().toISOString().split('T')[0];
