@@ -896,9 +896,33 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
                 <p>Check "Complete in one sitting" for tasks that shouldn't be divided into multiple sessions. Perfect for short tasks, meetings, or work that needs to be done all at once.</p>
               </div>
 
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">Task Importance & Scheduling Priority:</h4>
+                <div className="space-y-2">
+                  <div>
+                    <strong className="text-red-600 dark:text-red-400">High Impact Tasks:</strong>
+                    <p>Always scheduled first, regardless of deadline type. These tasks significantly affect your success and commitments.</p>
+                  </div>
+                  <div>
+                    <strong className="text-gray-600 dark:text-gray-400">Low Impact Tasks:</strong>
+                    <p>Scheduled after high impact tasks. Will be moved or postponed if schedule becomes tight.</p>
+                  </div>
+                  <div className="bg-amber-50 dark:bg-amber-900/30 p-2 rounded text-sm">
+                    <strong>Smart Scheduling Order:</strong>
+                    <ol className="list-decimal list-inside mt-1 space-y-1">
+                      <li>High impact + hard deadline (urgent & important)</li>
+                      <li>High impact + flexible/no deadline (important but not urgent)</li>
+                      <li>Low impact + hard deadline (urgent but not important)</li>
+                      <li>Low impact + flexible/no deadline (neither urgent nor important)</li>
+                    </ol>
+                  </div>
+                  <p className="text-sm"><strong>One-time tasks</strong> maintain their importance level but are scheduled as single, uninterrupted sessions.</p>
+                </div>
+              </div>
+
               <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
                 <p className="text-blue-800 dark:text-blue-200">
-                  <strong>Tip:</strong> Start with simple deadline tasks, then explore advanced options as you get comfortable with the app!
+                  <strong>Tip:</strong> Use high impact for tasks that significantly affect your goals, and low impact for routine or optional tasks. The app will automatically prioritize your schedule!
                 </p>
               </div>
             </div>
