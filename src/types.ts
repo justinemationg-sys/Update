@@ -11,6 +11,12 @@ export interface Task {
   category?: string;
   impact?: string;
   taskType?: string;
+  // New properties for deadline flexibility
+  deadlineType?: 'hard' | 'soft' | 'none'; // Type of deadline
+  schedulingPreference?: 'consistent' | 'opportunistic' | 'intensive'; // How to schedule no-deadline tasks
+  targetFrequency?: 'daily' | 'weekly' | '3x-week' | 'flexible'; // Frequency preference for no-deadline tasks
+  preferredTimeSlots?: ('morning' | 'afternoon' | 'evening')[]; // Preferred time slots
+  minWorkBlock?: number; // Minimum meaningful work session in minutes
 }
 
 export interface SessionSchedulingMetadata {
