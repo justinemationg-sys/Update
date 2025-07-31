@@ -106,7 +106,12 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
     customCategory: '',
     impact: '', // 'high' or 'low'
     taskType: '',
-    // modifiers removed
+    // New fields for deadline flexibility
+    deadlineType: 'hard' as 'hard' | 'soft' | 'none',
+    schedulingPreference: 'consistent' as 'consistent' | 'opportunistic' | 'intensive',
+    targetFrequency: 'weekly' as 'daily' | 'weekly' | '3x-week' | 'flexible',
+    preferredTimeSlots: [] as ('morning' | 'afternoon' | 'evening')[],
+    minWorkBlock: 30, // Default 30 minutes
   });
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [showTimePresets, setShowTimePresets] = useState(false);
