@@ -117,10 +117,21 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask, 
   };
 
   const saveEdit = () => {
-    if (editingTaskId && editFormData.title && editFormData.deadline) {
-      onUpdateTask(editingTaskId, editFormData);
+    if (editingTaskId && editFormData.title) {
+      const totalHours = (editFormData.estimatedHours || 0) + ((editFormData.estimatedMinutes || 0) / 60);
+      const category = editFormData.category === 'Custom...' ? editFormData.customCategory : editFormData.category;
+
+      onUpdateTask(editingTaskId, {
+        ...editFormData,
+        estimatedHours: totalHours,
+        category,
+        deadline: editFormData.deadlineType === 'none' ? '' : (editFormData.deadline || ''),
+        deadlineType: editFormData.deadline ? editFormData.deadlineType : 'none',
+        importance: editFormData.impact === 'high',
+      });
       setEditingTaskId(null);
       setEditFormData({});
+      setShowAdvancedOptions(false);
     }
   };
 
