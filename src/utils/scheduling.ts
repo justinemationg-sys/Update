@@ -1225,7 +1225,7 @@ export const generateNewStudyPlan = (
             doesCommitmentApplyToDate(commitment, plan.date)
           );
 
-          const slot = findAvailableTimeSlot(
+          const slot = findNextAvailableTimeSlot(
             sessionHours,
             plan.plannedTasks,
             commitmentsForDay,
