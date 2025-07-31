@@ -789,14 +789,25 @@ export const generateNewStudyPlan = (
   if (settings.studyPlanMode === 'balanced') {
     // BALANCED PRIORITY DISTRIBUTION LOGIC
     // Combines even distribution stability with priority-based task ordering
-    const tasksBalanced = tasks
-      .filter(task => task.status === 'pending' && task.estimatedHours > 0)
+    const allPendingTasksBalanced = tasks.filter(task => task.status === 'pending' && task.estimatedHours > 0);
+
+    const deadlineTasksBalanced = allPendingTasksBalanced
+      .filter(task => !task.deadlineType || task.deadlineType !== 'none')
       .sort((a, b) => {
         // First sort by importance
         if (a.importance !== b.importance) return a.importance ? -1 : 1;
         // Then by deadline urgency for same importance level
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
       });
+
+    const noDeadlineTasksBalanced = allPendingTasksBalanced
+      .filter(task => task.deadlineType === 'none')
+      .sort((a, b) => {
+        if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
+        return a.title.localeCompare(b.title); // Then alphabetically
+      });
+
+    const tasksBalanced = deadlineTasksBalanced;
 
     // Create priority tiers for balanced distribution
     const importantTasks = tasksBalanced.filter(task => task.importance);
