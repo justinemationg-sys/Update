@@ -340,7 +340,7 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Deadline <span className="text-red-500">*</span></label>
             <input
               type="date"
-              required
+              required={formData.deadlineType !== 'none'}
               min={today}
               value={formData.deadline}
               onChange={e => setFormData(f => ({ ...f, deadline: e.target.value }))}
