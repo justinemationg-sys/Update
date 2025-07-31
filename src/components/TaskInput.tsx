@@ -112,6 +112,7 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
     targetFrequency: 'weekly' as 'daily' | 'weekly' | '3x-week' | 'flexible',
     preferredTimeSlots: [] as ('morning' | 'afternoon' | 'evening')[],
     minWorkBlock: 30, // Default 30 minutes
+    isOneTimeTask: false, // New field for one-time tasks
   });
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [showTimePresets, setShowTimePresets] = useState(false);
