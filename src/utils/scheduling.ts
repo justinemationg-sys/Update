@@ -243,12 +243,25 @@ export const generateNewStudyPlan = (
 
   if (settings.studyPlanMode === 'even') {
     // EVEN DISTRIBUTION LOGIC
-    const tasksEven = tasks
-      .filter(task => task.status === 'pending' && task.estimatedHours > 0)
+    // Separate deadline-based tasks from no-deadline tasks
+    const allPendingTasks = tasks.filter(task => task.status === 'pending' && task.estimatedHours > 0);
+
+    const deadlineTasks = allPendingTasks
+      .filter(task => !task.deadlineType || task.deadlineType !== 'none')
       .sort((a, b) => {
         if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime(); // Then by deadline (earlier = more urgent)
       });
+
+    const noDeadlineTasks = allPendingTasks
+      .filter(task => task.deadlineType === 'none')
+      .sort((a, b) => {
+        if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
+        return a.title.localeCompare(b.title); // Then alphabetically
+      });
+
+    // Use deadline tasks for now (we'll add no-deadline scheduling later)
+    const tasksEven = deadlineTasks;
 
     // Create a map of missed session hours per task for separate redistribution
     const missedSessionHoursByTask: { [taskId: string]: number } = {};
