@@ -266,7 +266,7 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
       status: 'pending',
       importance: formData.impact === 'high',
       // New fields for deadline flexibility
-      deadlineType: formData.deadlineType,
+      deadlineType: formData.deadline ? formData.deadlineType : 'none',
       schedulingPreference: formData.schedulingPreference,
       targetFrequency: formData.targetFrequency,
       preferredTimeSlots: formData.preferredTimeSlots,
