@@ -682,7 +682,106 @@ export const generateNewStudyPlan = (
       // Combine sessions again after missed session redistribution
       combineSessionsOnSameDay(studyPlans);
     }
-    
+
+    // Step 3: Schedule no-deadline tasks in remaining available time
+    if (noDeadlineTasks.length > 0) {
+      // Extend available days for no-deadline tasks (add 30 more days)
+      const extendedDate = new Date(now);
+      extendedDate.setDate(extendedDate.getDate() + 30);
+
+      while (tempDate <= extendedDate) {
+        const dateStr = tempDate.toISOString().split('T')[0];
+        const dayOfWeek = tempDate.getDay();
+        if (settings.workDays.includes(dayOfWeek) && !availableDays.includes(dateStr)) {
+          availableDays.push(dateStr);
+        }
+        tempDate.setDate(tempDate.getDate() + 1);
+      }
+
+      // Create study plans for extended days if needed
+      availableDays.forEach(date => {
+        if (!studyPlans.find(plan => plan.date === date)) {
+          studyPlans.push({
+            id: `${date}-study-plan`,
+            date,
+            plannedTasks: [],
+            totalStudyHours: 0,
+            availableHours: settings.dailyAvailableHours
+          });
+        }
+      });
+
+      // Schedule no-deadline tasks in available slots
+      noDeadlineTasks.forEach((task, taskIndex) => {
+        let remainingHours = task.estimatedHours;
+        const minSessionHours = (task.minWorkBlock || 30) / 60; // Convert minutes to hours
+
+        // Determine session frequency based on task preferences
+        let sessionGap = 1; // Days between sessions
+        if (task.targetFrequency === 'weekly') sessionGap = 7;
+        else if (task.targetFrequency === '3x-week') sessionGap = 2;
+        else if (task.targetFrequency === 'flexible') sessionGap = 3;
+
+        let sessionNumber = 1;
+        let dayIndex = 0;
+
+        while (remainingHours > 0 && dayIndex < availableDays.length) {
+          const currentDate = availableDays[dayIndex];
+          const plan = studyPlans.find(p => p.date === currentDate);
+
+          if (plan) {
+            // Calculate available time on this day
+            const usedHours = plan.plannedTasks.reduce((sum, session) => sum + session.allocatedHours, 0);
+            const availableHours = plan.availableHours - usedHours;
+
+            // Check if we have enough time for minimum session
+            if (availableHours >= minSessionHours) {
+              // Determine session length
+              const sessionHours = Math.min(
+                remainingHours,
+                availableHours,
+                Math.max(minSessionHours, Math.min(2, remainingHours)) // Max 2 hours per session
+              );
+
+              // Create the session
+              const startTimeHour = 9 + (usedHours % 8); // Spread sessions across day
+              const endTimeHour = startTimeHour + sessionHours;
+
+              const session: StudySession = {
+                taskId: task.id,
+                scheduledTime: currentDate,
+                startTime: `${Math.floor(startTimeHour).toString().padStart(2, '0')}:${((startTimeHour % 1) * 60).toString().padStart(2, '0')}`,
+                endTime: `${Math.floor(endTimeHour).toString().padStart(2, '0')}:${((endTimeHour % 1) * 60).toString().padStart(2, '0')}`,
+                allocatedHours: sessionHours,
+                sessionNumber,
+                isFlexible: true // Mark as flexible for easy rescheduling
+              };
+
+              plan.plannedTasks.push(session);
+              plan.totalStudyHours += sessionHours;
+              remainingHours -= sessionHours;
+              sessionNumber++;
+
+              // Apply session gap for next scheduling
+              dayIndex += sessionGap;
+            } else {
+              dayIndex++;
+            }
+          } else {
+            dayIndex++;
+          }
+        }
+
+        // Track unscheduled hours
+        if (remainingHours > 0) {
+          suggestions.push({
+            taskTitle: task.title,
+            unscheduledMinutes: Math.round(remainingHours * 60)
+          });
+        }
+      });
+    }
+
     // After all days, return plans and suggestions for any unscheduled hours
     return { plans: studyPlans, suggestions };
   }
