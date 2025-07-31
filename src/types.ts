@@ -17,6 +17,7 @@ export interface Task {
   targetFrequency?: 'daily' | 'weekly' | '3x-week' | 'flexible'; // Frequency preference for no-deadline tasks
   preferredTimeSlots?: ('morning' | 'afternoon' | 'evening')[]; // Preferred time slots
   minWorkBlock?: number; // Minimum meaningful work session in minutes
+  isOneTimeTask?: boolean; // Task should be completed in one sitting, not divided into sessions
 }
 
 export interface SessionSchedulingMetadata {
