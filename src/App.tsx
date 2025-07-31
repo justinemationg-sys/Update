@@ -1636,35 +1636,11 @@ function App() {
                 </header>
 
                 {/* Navigation */}
-                <nav className="backdrop-blur-md bg-white/5 dark:bg-black/5 border-b border-white/10 dark:border-white/5">
+                <nav className="backdrop-blur-md bg-white/90 dark:bg-gray-900/90 border-b border-gray-200/50 dark:border-gray-700/50">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         {/* Desktop Navigation */}
-                        <div className="hidden lg:flex space-x-2">
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => {
-                                        setActiveTab(tab.id as typeof activeTab);
-                                        setMobileMenuOpen(false);
-                                    }}
-                                    className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium transition-all duration-300 rounded-t-2xl relative group ${
-                                        activeTab === tab.id
-                                            ? 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-700 dark:text-violet-300 border-b-2 border-violet-500'
-                                            : 'text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-white/10 dark:hover:bg-white/5'
-                                        } ${showInteractiveTutorial && highlightedTab === tab.id ? 'ring-2 ring-yellow-400 animate-pulse shadow-lg shadow-yellow-400/50' : ''}`}
-                                >
-                                    <tab.icon size={20} className={activeTab === tab.id ? 'text-violet-600 dark:text-violet-400' : ''} />
-                                    <span>{tab.label}</span>
-                                    {activeTab === tab.id && (
-                                        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-t-2xl"></div>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Mobile Navigation */}
-                        <div className={`lg:hidden ${mobileMenuOpen ? 'block' : 'hidden'}`}>
-                            <div className="py-4 space-y-2">
+                        <div className="hidden lg:flex items-center justify-center space-x-1 py-3">
+                            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1">
                                 {tabs.map((tab) => (
                                     <button
                                         key={tab.id}
@@ -1672,16 +1648,44 @@ function App() {
                                             setActiveTab(tab.id as typeof activeTab);
                                             setMobileMenuOpen(false);
                                         }}
-                                        className={`w-full flex items-center space-x-3 px-6 py-4 text-sm font-medium transition-all duration-300 rounded-2xl backdrop-blur-sm ${
+                                        className={`flex items-center justify-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 relative ${
                                             activeTab === tab.id
-                                                ? 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-700 dark:text-violet-300 border border-violet-200/50 dark:border-violet-500/30'
-                                                : 'text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-white/10 dark:hover:bg-white/5 border border-transparent'
-                                        } ${showInteractiveTutorial && highlightedTab === tab.id ? 'ring-2 ring-yellow-400 animate-pulse shadow-lg shadow-yellow-400/50' : ''}`}
+                                                ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25'
+                                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
+                                        } ${showInteractiveTutorial && highlightedTab === tab.id ? 'ring-2 ring-yellow-400 animate-pulse' : ''}`}
+                                        title={tab.label}
                                     >
-                                        <tab.icon size={20} className={activeTab === tab.id ? 'text-violet-600 dark:text-violet-400' : ''} />
-                                        <span>{tab.label}</span>
+                                        <tab.icon size={18} />
+                                        {activeTab === tab.id && (
+                                            <span className="ml-2 hidden sm:inline">{tab.label}</span>
+                                        )}
                                     </button>
                                 ))}
+                            </div>
+                        </div>
+
+                        {/* Mobile Navigation */}
+                        <div className={`lg:hidden ${mobileMenuOpen ? 'block' : 'hidden'}`}>
+                            <div className="py-4">
+                                <div className="flex flex-wrap items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-2xl p-2">
+                                    {tabs.map((tab) => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => {
+                                                setActiveTab(tab.id as typeof activeTab);
+                                                setMobileMenuOpen(false);
+                                            }}
+                                            className={`flex items-center justify-center px-3 py-2 rounded-xl text-xs font-medium transition-all duration-300 ${
+                                                activeTab === tab.id
+                                                    ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25'
+                                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
+                                            } ${showInteractiveTutorial && highlightedTab === tab.id ? 'ring-2 ring-yellow-400 animate-pulse' : ''}`}
+                                        >
+                                            <tab.icon size={16} />
+                                            <span className="ml-1">{tab.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>

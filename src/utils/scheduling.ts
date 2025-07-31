@@ -105,6 +105,11 @@ const optimizeSessionDistribution = (task: Task, totalHours: number, daysForTask
   const minSessionLength = (settings.minSessionLength || 15) / 60; // in hours
   const maxSessionLength = Math.min(4, settings.dailyAvailableHours); // Cap at 4 hours or daily limit
 
+  // For one-time tasks, return a single session with all hours
+  if (task.isOneTimeTask) {
+    return [totalHours];
+  }
+
   // Try to create fewer, larger sessions
   let optimalSessions: number[] = [];
   let remainingHours = totalHours;
@@ -243,12 +248,25 @@ export const generateNewStudyPlan = (
 
   if (settings.studyPlanMode === 'even') {
     // EVEN DISTRIBUTION LOGIC
-    const tasksEven = tasks
-      .filter(task => task.status === 'pending' && task.estimatedHours > 0)
+    // Separate deadline-based tasks from no-deadline tasks
+    const allPendingTasks = tasks.filter(task => task.status === 'pending' && task.estimatedHours > 0);
+
+    const deadlineTasks = allPendingTasks
+      .filter(task => task.deadline && task.deadline.trim().length > 0 && task.deadlineType !== 'none')
       .sort((a, b) => {
         if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime(); // Then by deadline (earlier = more urgent)
       });
+
+    const noDeadlineTasks = allPendingTasks
+      .filter(task => !task.deadline || task.deadline.trim().length === 0 || task.deadlineType === 'none')
+      .sort((a, b) => {
+        if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
+        return a.title.localeCompare(b.title); // Then alphabetically
+      });
+
+    // Use deadline tasks for now (we'll add no-deadline scheduling later)
+    const tasksEven = deadlineTasks;
 
     // Create a map of missed session hours per task for separate redistribution
     const missedSessionHoursByTask: { [taskId: string]: number } = {};
@@ -669,7 +687,106 @@ export const generateNewStudyPlan = (
       // Combine sessions again after missed session redistribution
       combineSessionsOnSameDay(studyPlans);
     }
-    
+
+    // Step 3: Schedule no-deadline tasks in remaining available time
+    if (noDeadlineTasks.length > 0) {
+      // Extend available days for no-deadline tasks (add 30 more days)
+      const extendedDate = new Date(now);
+      extendedDate.setDate(extendedDate.getDate() + 30);
+
+      while (tempDate <= extendedDate) {
+        const dateStr = tempDate.toISOString().split('T')[0];
+        const dayOfWeek = tempDate.getDay();
+        if (settings.workDays.includes(dayOfWeek) && !availableDays.includes(dateStr)) {
+          availableDays.push(dateStr);
+        }
+        tempDate.setDate(tempDate.getDate() + 1);
+      }
+
+      // Create study plans for extended days if needed
+      availableDays.forEach(date => {
+        if (!studyPlans.find(plan => plan.date === date)) {
+          studyPlans.push({
+            id: `${date}-study-plan`,
+            date,
+            plannedTasks: [],
+            totalStudyHours: 0,
+            availableHours: settings.dailyAvailableHours
+          });
+        }
+      });
+
+      // Schedule no-deadline tasks in available slots
+      noDeadlineTasks.forEach((task, taskIndex) => {
+        let remainingHours = task.estimatedHours;
+        const minSessionHours = (task.minWorkBlock || 30) / 60; // Convert minutes to hours
+
+        // Determine session frequency based on task preferences
+        let sessionGap = 1; // Days between sessions
+        if (task.targetFrequency === 'weekly') sessionGap = 7;
+        else if (task.targetFrequency === '3x-week') sessionGap = 2;
+        else if (task.targetFrequency === 'flexible') sessionGap = 3;
+
+        let sessionNumber = 1;
+        let dayIndex = 0;
+
+        while (remainingHours > 0 && dayIndex < availableDays.length) {
+          const currentDate = availableDays[dayIndex];
+          const plan = studyPlans.find(p => p.date === currentDate);
+
+          if (plan) {
+            // Calculate available time on this day
+            const usedHours = plan.plannedTasks.reduce((sum, session) => sum + session.allocatedHours, 0);
+            const availableHours = plan.availableHours - usedHours;
+
+            // Check if we have enough time for minimum session
+            if (availableHours >= minSessionHours) {
+              // Determine session length
+              const sessionHours = Math.min(
+                remainingHours,
+                availableHours,
+                Math.max(minSessionHours, Math.min(2, remainingHours)) // Max 2 hours per session
+              );
+
+              // Create the session
+              const startTimeHour = 9 + (usedHours % 8); // Spread sessions across day
+              const endTimeHour = startTimeHour + sessionHours;
+
+              const session: StudySession = {
+                taskId: task.id,
+                scheduledTime: currentDate,
+                startTime: `${Math.floor(startTimeHour).toString().padStart(2, '0')}:${((startTimeHour % 1) * 60).toString().padStart(2, '0')}`,
+                endTime: `${Math.floor(endTimeHour).toString().padStart(2, '0')}:${((endTimeHour % 1) * 60).toString().padStart(2, '0')}`,
+                allocatedHours: sessionHours,
+                sessionNumber,
+                isFlexible: true // Mark as flexible for easy rescheduling
+              };
+
+              plan.plannedTasks.push(session);
+              plan.totalStudyHours += sessionHours;
+              remainingHours -= sessionHours;
+              sessionNumber++;
+
+              // Apply session gap for next scheduling
+              dayIndex += sessionGap;
+            } else {
+              dayIndex++;
+            }
+          } else {
+            dayIndex++;
+          }
+        }
+
+        // Track unscheduled hours
+        if (remainingHours > 0) {
+          suggestions.push({
+            taskTitle: task.title,
+            unscheduledMinutes: Math.round(remainingHours * 60)
+          });
+        }
+      });
+    }
+
     // After all days, return plans and suggestions for any unscheduled hours
     return { plans: studyPlans, suggestions };
   }
@@ -677,14 +794,25 @@ export const generateNewStudyPlan = (
   if (settings.studyPlanMode === 'balanced') {
     // BALANCED PRIORITY DISTRIBUTION LOGIC
     // Combines even distribution stability with priority-based task ordering
-    const tasksBalanced = tasks
-      .filter(task => task.status === 'pending' && task.estimatedHours > 0)
+    const allPendingTasksBalanced = tasks.filter(task => task.status === 'pending' && task.estimatedHours > 0);
+
+    const deadlineTasksBalanced = allPendingTasksBalanced
+      .filter(task => task.deadline && task.deadline.trim().length > 0 && task.deadlineType !== 'none')
       .sort((a, b) => {
         // First sort by importance
         if (a.importance !== b.importance) return a.importance ? -1 : 1;
         // Then by deadline urgency for same importance level
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
       });
+
+    const noDeadlineTasksBalanced = allPendingTasksBalanced
+      .filter(task => !task.deadline || task.deadline.trim().length === 0 || task.deadlineType === 'none')
+      .sort((a, b) => {
+        if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
+        return a.title.localeCompare(b.title); // Then alphabetically
+      });
+
+    const tasksBalanced = deadlineTasksBalanced;
 
     // Create priority tiers for balanced distribution
     const importantTasks = tasksBalanced.filter(task => task.importance);
@@ -857,6 +985,53 @@ export const generateNewStudyPlan = (
       }
     }
 
+    // Schedule no-deadline tasks in remaining available time
+    if (noDeadlineTasksBalanced.length > 0) {
+      // Simple scheduling for no-deadline tasks in balanced mode
+      noDeadlineTasksBalanced.forEach(task => {
+        let remainingHours = task.estimatedHours;
+        const minSessionHours = (task.minWorkBlock || 30) / 60;
+        let sessionNumber = 1;
+
+        for (const plan of studyPlans) {
+          if (remainingHours <= 0) break;
+
+          const usedHours = plan.plannedTasks.reduce((sum, session) => sum + session.allocatedHours, 0);
+          const availableHours = plan.availableHours - usedHours;
+
+          if (availableHours >= minSessionHours) {
+            // For one-time tasks, try to schedule all remaining hours at once
+            let sessionHours;
+            if (task.isOneTimeTask && sessionNumber === 1) {
+              sessionHours = remainingHours <= availableHours ? remainingHours : 0;
+            } else {
+              sessionHours = Math.min(remainingHours, availableHours, 1.5); // Max 1.5 hours per session
+            }
+
+            if (sessionHours <= 0) continue;
+
+            const startTimeHour = 9 + (usedHours % 8);
+            const endTimeHour = startTimeHour + sessionHours;
+
+            const session: StudySession = {
+              taskId: task.id,
+              scheduledTime: plan.date,
+              startTime: `${Math.floor(startTimeHour).toString().padStart(2, '0')}:${((startTimeHour % 1) * 60).toString().padStart(2, '0')}`,
+              endTime: `${Math.floor(endTimeHour).toString().padStart(2, '0')}:${((endTimeHour % 1) * 60).toString().padStart(2, '0')}`,
+              allocatedHours: sessionHours,
+              sessionNumber,
+              isFlexible: true
+            };
+
+            plan.plannedTasks.push(session);
+            plan.totalStudyHours += sessionHours;
+            remainingHours -= sessionHours;
+            sessionNumber++;
+          }
+        }
+      });
+    }
+
     // Create suggestions for any unscheduled hours
     const suggestions = getUnscheduledMinutesForTasks(prioritizedTasks,
       prioritizedTasks.reduce((acc, task) => {
@@ -870,12 +1045,23 @@ export const generateNewStudyPlan = (
   }
 
   // Step 1: Filter and sort tasks by Eisenhower Matrix logic
-  const tasksSorted = tasks
-    .filter(task => task.status === 'pending' && task.estimatedHours > 0)
+  const allPendingTasksEisen = tasks.filter(task => task.status === 'pending' && task.estimatedHours > 0);
+
+  const deadlineTasksEisen = allPendingTasksEisen
+    .filter(task => task.deadline && task.deadline.trim().length > 0 && task.deadlineType !== 'none')
     .sort((a, b) => {
       if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
       return new Date(a.deadline).getTime() - new Date(b.deadline).getTime(); // Then by deadline
     });
+
+  const noDeadlineTasksEisen = allPendingTasksEisen
+    .filter(task => !task.deadline || task.deadline.trim().length === 0 || task.deadlineType === 'none')
+    .sort((a, b) => {
+      if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
+      return a.title.localeCompare(b.title); // Then alphabetically
+    });
+
+  const tasksSorted = deadlineTasksEisen;
 
   // Step 2: Create a map of available study days (using same logic as even mode)
   const now = new Date();
@@ -968,7 +1154,15 @@ export const generateNewStudyPlan = (
       const remainingTaskHours = task.estimatedHours - taskScheduledHours[task.id];
       if (remainingTaskHours <= 0) continue;
       // Allocate as much as possible for this task
-      const hoursToSchedule = Math.min(remainingTaskHours, availableHours);
+      // For one-time tasks, schedule all remaining hours at once if possible
+      let hoursToSchedule;
+      if (task.isOneTimeTask && taskScheduledHours[task.id] === 0) {
+        // One-time task: try to schedule all hours at once
+        hoursToSchedule = remainingTaskHours <= availableHours ? remainingTaskHours : 0;
+      } else {
+        // Regular task: can be split across sessions
+        hoursToSchedule = Math.min(remainingTaskHours, availableHours);
+      }
       if (hoursToSchedule > 0) {
         // Find the next available time slot for this session
         const existingSessions = dayPlan.plannedTasks;
@@ -1000,6 +1194,70 @@ export const generateNewStudyPlan = (
         taskScheduledHours[task.id] = Math.round((taskScheduledHours[task.id] + session.allocatedHours) * 60) / 60;
       }
     }
+  }
+
+  // Schedule no-deadline tasks in remaining available time
+  if (noDeadlineTasksEisen.length > 0) {
+    noDeadlineTasksEisen.forEach(task => {
+      let remainingHours = task.estimatedHours;
+      const minSessionHours = (task.minWorkBlock || 30) / 60;
+      let sessionNumber = 1;
+
+      for (const plan of studyPlans) {
+        if (remainingHours <= 0) break;
+
+        const usedHours = plan.plannedTasks.reduce((sum, session) => sum + session.allocatedHours, 0);
+        const availableHours = plan.availableHours - usedHours;
+
+        if (availableHours >= minSessionHours) {
+          // For one-time tasks, try to schedule all remaining hours at once
+          let sessionHours;
+          if (task.isOneTimeTask && sessionNumber === 1) {
+            sessionHours = remainingHours <= availableHours ? remainingHours : 0;
+          } else {
+            sessionHours = Math.min(remainingHours, availableHours, 1.5);
+          }
+
+          if (sessionHours <= 0) continue;
+
+          // Find available time slot
+          const commitmentsForDay = fixedCommitments.filter(commitment =>
+            doesCommitmentApplyToDate(commitment, plan.date)
+          );
+
+          const slot = findNextAvailableTimeSlot(
+            sessionHours,
+            plan.plannedTasks,
+            commitmentsForDay,
+            settings.studyWindowStartHour || 6,
+            settings.studyWindowEndHour || 23,
+            settings.bufferTimeBetweenSessions || 0,
+            plan.date
+          );
+
+          if (slot) {
+            const session: StudySession = {
+              taskId: task.id,
+              scheduledTime: `${plan.date} ${slot.start}`,
+              startTime: slot.start,
+              endTime: slot.end,
+              allocatedHours: sessionHours,
+              sessionNumber,
+              isFlexible: true,
+              status: 'scheduled'
+            };
+
+            plan.plannedTasks.push(session);
+            plan.totalStudyHours += sessionHours;
+            remainingHours -= sessionHours;
+            sessionNumber++;
+          }
+        }
+      }
+
+      // Add to task scheduled hours tracking
+      taskScheduledHours[task.id] = (taskScheduledHours[task.id] || 0) + (task.estimatedHours - remainingHours);
+    });
   }
 
   // After all days, add suggestions for any unscheduled hours

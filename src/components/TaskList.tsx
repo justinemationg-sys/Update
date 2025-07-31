@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Edit, Trash2, CheckCircle2, X, Info } from 'lucide-react';
+import { BookOpen, Edit, Trash2, CheckCircle2, X, Info, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 import { Task } from '../types';
 import { formatTime } from '../utils/scheduling';
 
@@ -12,14 +12,24 @@ interface TaskListProps {
 }
 
 type EditFormData = Partial<Task> & {
-  // evenDistribution: boolean; // Removed
-  // frontOrBack: 'front-load' | 'back-load'; // Removed
+  estimatedMinutes?: number;
+  customCategory?: string;
+  impact?: string;
+  taskType?: string;
+  deadlineType?: 'hard' | 'soft' | 'none';
+  schedulingPreference?: 'consistent' | 'opportunistic' | 'intensive';
+  targetFrequency?: 'daily' | 'weekly' | '3x-week' | 'flexible';
+  preferredTimeSlots?: ('morning' | 'afternoon' | 'evening')[];
+  minWorkBlock?: number;
+  isOneTimeTask?: boolean;
 };
 
 const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask, autoRemovedTasks = [], onDismissAutoRemovedTask }) => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<EditFormData>({});
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = new Date().toISOString().split('T')[0];
@@ -80,24 +90,48 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask, 
 
   const startEditing = (task: Task) => {
     setEditingTaskId(task.id);
+    const totalMinutes = Math.round((task.estimatedHours || 0) * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
     setEditFormData({
       title: task.title,
       description: task.description,
       deadline: task.deadline,
       importance: task.importance,
-      estimatedHours: task.estimatedHours,
+      estimatedHours: hours,
+      estimatedMinutes: minutes,
       subject: task.subject,
-      category: task.category, // Added
-      // distributionStrategy: task.distributionStrategy || 'even', // Removed
-      // evenDistribution: !task.distributionStrategy || task.distributionStrategy === 'even', // Removed
+      category: task.category === 'Custom...' ? '' : task.category,
+      customCategory: task.category && !['Academics', 'Org', 'Work', 'Personal', 'Health', 'Learning', 'Finance', 'Home'].includes(task.category) ? task.category : '',
+      impact: task.impact || (task.importance ? 'high' : 'low'),
+      taskType: task.taskType || '',
+      deadlineType: task.deadlineType || (task.deadline ? 'hard' : 'none'),
+      schedulingPreference: task.schedulingPreference || 'consistent',
+      targetFrequency: task.targetFrequency || 'weekly',
+      preferredTimeSlots: task.preferredTimeSlots || [],
+      minWorkBlock: task.minWorkBlock || 30,
+      isOneTimeTask: task.isOneTimeTask || false,
     });
+    setShowAdvancedOptions(false);
   };
 
   const saveEdit = () => {
-    if (editingTaskId && editFormData.title && editFormData.deadline) {
-      onUpdateTask(editingTaskId, editFormData);
+    if (editingTaskId && editFormData.title) {
+      const totalHours = (editFormData.estimatedHours || 0) + ((editFormData.estimatedMinutes || 0) / 60);
+      const category = editFormData.category === 'Custom...' ? editFormData.customCategory : editFormData.category;
+
+      onUpdateTask(editingTaskId, {
+        ...editFormData,
+        estimatedHours: totalHours,
+        category,
+        deadline: editFormData.deadlineType === 'none' ? '' : (editFormData.deadline || ''),
+        deadlineType: editFormData.deadline ? editFormData.deadlineType : 'none',
+        importance: editFormData.impact === 'high',
+      });
       setEditingTaskId(null);
       setEditFormData({});
+      setShowAdvancedOptions(false);
     }
   };
 
@@ -149,107 +183,286 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask, 
               >
               {editingTaskId === task.id ? (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    {/* Task Title & Description */}
+                    <div className="grid grid-cols-1 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Task Title
-                        </label>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Task Title <span className="text-red-500">*</span></label>
                         <input
                           type="text"
+                          required
                           value={editFormData.title || ''}
                           onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full px-4 py-3 backdrop-blur-sm bg-white/70 dark:bg-black/20 border border-white/30 dark:border-white/20 rounded-xl text-base focus:ring-2 focus:ring-violet-500 focus:border-transparent dark:text-white transition-all duration-300"
+                          placeholder="e.g., Write project report"
                         />
                       </div>
+
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Subject
-                        </label>
-                        <input
-                          type="text"
-                          value={editFormData.subject || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, subject: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Estimated Hours
-                        </label>
-                        <input
-                          type="number"
-                          step="0.25"
-                          min="0"
-                          value={editFormData.estimatedHours || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, estimatedHours: parseFloat(e.target.value) || 0 })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Deadline
-                        </label>
-                        <input
-                          type="date"
-                          min={today}
-                          value={editFormData.deadline || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, deadline: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Description <span className="text-gray-400">(Optional)</span></label>
+                        <textarea
+                          value={editFormData.description || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none h-20 border-gray-300 bg-white dark:bg-gray-800 dark:text-white"
+                          placeholder="Describe the task..."
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Category
-                        </label>
-                        <select
-                          value={editFormData.category || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          <option value="">Select Category</option>
-                          <option value="academics">Academics</option>
-                          <option value="personal">Personal</option>
-                          <option value="learning">Learning</option>
-                          <option value="home">Home</option>
-                          <option value="finance">Finance</option>
-                          <option value="organization">Organization</option>
-                          <option value="work">Work</option>
-                          <option value="health">Health</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Priority
-                        </label>
-                        <select
-                          value={editFormData.importance ? 'high' : 'low'}
-                          onChange={(e) => setEditFormData({ ...editFormData, importance: e.target.value === 'high' })}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          <option value="low">Low Priority</option>
-                          <option value="high">High Priority</option>
-                        </select>
-                      </div>
-                            </div>
-                    
+                    {/* Estimated Time */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                        Description
-                      </label>
-                      <textarea
-                        value={editFormData.description || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                        rows={3}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        placeholder="Optional description..."
-                                  />
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Estimated Time <span className="text-red-500">*</span></label>
+                      <div className="flex gap-2 items-center">
+                        <div className="flex-1">
+                          <input
+                            type="number"
+                            min="0"
+                            value={editFormData.estimatedHours || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, estimatedHours: parseInt(e.target.value) || 0 })}
+                            className="w-full border rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent border-gray-300 bg-white dark:bg-gray-800 dark:text-white"
+                            placeholder="0"
+                          />
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Hours</div>
+                        </div>
+                        <div className="text-gray-500 dark:text-gray-400 text-lg font-bold">:</div>
+                        <div className="flex-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="59"
+                            value={editFormData.estimatedMinutes || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, estimatedMinutes: parseInt(e.target.value) || 0 })}
+                            className="w-full border rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent border-gray-300 bg-white dark:bg-gray-800 dark:text-white"
+                            placeholder="0"
+                          />
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Minutes</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Deadline & One-time task */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Deadline <span className="text-gray-400">(Optional)</span></label>
+                      <input
+                        type="date"
+                        min={today}
+                        value={editFormData.deadline || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, deadline: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent border-gray-300 bg-white dark:bg-gray-800 dark:text-white"
+                        placeholder="Select deadline (optional)"
+                      />
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for flexible tasks, or set a deadline for time-sensitive work</div>
+
+                      {/* One-time task option */}
+                      <div className="mt-3">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={editFormData.isOneTimeTask || false}
+                            onChange={(e) => setEditFormData({ ...editFormData, isOneTimeTask: e.target.checked })}
+                            className="text-blue-600"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-200">Complete this task in one sitting (don't divide into sessions)</span>
+                        </label>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Check this for short tasks or tasks that need to be done all at once</div>
+                      </div>
+                    </div>
+
+                    {/* Impact */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">How much will this impact your goals? <span className="text-red-500">*</span></label>
+                      <div className="flex flex-col md:flex-row gap-4 mt-2">
+                        <label className="flex items-center gap-2 text-base font-normal text-gray-700 dark:text-gray-100">
+                          <input
+                            type="radio"
+                            name="impact"
+                            value="high"
+                            checked={editFormData.impact === 'high'}
+                            onChange={() => setEditFormData({ ...editFormData, impact: 'high' })}
+                          />
+                          <span>High impact (significantly affects your success/commitments)</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-base font-normal text-gray-700 dark:text-gray-100">
+                          <input
+                            type="radio"
+                            name="impact"
+                            value="low"
+                            checked={editFormData.impact === 'low'}
+                            onChange={() => setEditFormData({ ...editFormData, impact: 'low' })}
+                          />
+                          <span>Low impact (standard task, manageable if delayed)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Advanced Timeline Options Toggle */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition-colors"
+                      >
+                        {showAdvancedOptions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        Advanced Timeline Options
+                      </button>
+
+                      {showAdvancedOptions && (
+                        <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Task Timeline Options</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowHelpModal(true)}
+                              className="text-gray-400 hover:text-blue-600 transition-colors"
+                              title="Help & Information"
+                            >
+                              <HelpCircle size={16} />
+                            </button>
+                          </div>
+
+                          {/* Category & Task Type */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Category <span className="text-gray-400">(Optional)</span></label>
+                              <select
+                                value={editFormData.category || ''}
+                                onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value, customCategory: '' })}
+                                className="w-full border rounded-lg px-3 py-2 text-base bg-white dark:bg-gray-800 dark:text-white"
+                              >
+                                <option value="">Select category...</option>
+                                {['Academics', 'Org', 'Work', 'Personal', 'Health', 'Learning', 'Finance', 'Home', 'Custom...'].map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                              {editFormData.category === 'Custom...' && (
+                                <input
+                                  type="text"
+                                  value={editFormData.customCategory || ''}
+                                  onChange={(e) => setEditFormData({ ...editFormData, customCategory: e.target.value })}
+                                  className="w-full border rounded-lg px-3 py-2 mt-2 text-base bg-white dark:bg-gray-800 dark:text-white"
+                                  placeholder="Enter custom category"
+                                />
+                              )}
                             </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Task Type</label>
+                              <select
+                                value={editFormData.taskType || ''}
+                                onChange={(e) => setEditFormData({ ...editFormData, taskType: e.target.value })}
+                                className="w-full border rounded-lg px-3 py-2 text-base bg-white dark:bg-gray-800 dark:text-white"
+                              >
+                                <option value="">Select task type...</option>
+                                {['Planning', 'Creating', 'Learning', 'Administrative', 'Communicating', 'Deep Focus Work'].map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Deadline Type Selection */}
+                          <div className="space-y-2 mb-4">
+                            <label className="flex items-center gap-3 p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-white dark:hover:bg-gray-700 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="deadlineType"
+                                value="hard"
+                                checked={editFormData.deadlineType === 'hard'}
+                                onChange={() => setEditFormData({ ...editFormData, deadlineType: 'hard' })}
+                                className="text-blue-600"
+                              />
+                              <div>
+                                <div className="text-sm font-medium text-gray-800 dark:text-white">Hard deadline (must finish by date)</div>
+                              </div>
+                            </label>
+
+                            <label className="flex items-center gap-3 p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-white dark:hover:bg-gray-700 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="deadlineType"
+                                value="soft"
+                                checked={editFormData.deadlineType === 'soft'}
+                                onChange={() => setEditFormData({ ...editFormData, deadlineType: 'soft' })}
+                                className="text-blue-600"
+                              />
+                              <div>
+                                <div className="text-sm font-medium text-gray-800 dark:text-white">Flexible target date</div>
+                              </div>
+                            </label>
+
+                            <label className="flex items-center gap-3 p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-white dark:hover:bg-gray-700 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="deadlineType"
+                                value="none"
+                                checked={editFormData.deadlineType === 'none'}
+                                onChange={() => setEditFormData({ ...editFormData, deadlineType: 'none' })}
+                                className="text-blue-600"
+                              />
+                              <div>
+                                <div className="text-sm font-medium text-gray-800 dark:text-white">No deadline (work when time allows)</div>
+                              </div>
+                            </label>
+                          </div>
+
+                          {/* No-deadline task preferences */}
+                          {editFormData.deadlineType === 'none' && (
+                            <div className="space-y-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Work frequency</label>
+                                <select
+                                  value={editFormData.targetFrequency || ''}
+                                  onChange={(e) => setEditFormData({ ...editFormData, targetFrequency: e.target.value as any })}
+                                  className="w-full px-2 py-1 border rounded text-sm bg-white dark:bg-gray-800 dark:text-white"
+                                >
+                                  <option value="daily">Daily progress</option>
+                                  <option value="3x-week">Few times per week</option>
+                                  <option value="weekly">Weekly</option>
+                                  <option value="flexible">When I have time</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Preferred time</label>
+                                <div className="flex gap-2">
+                                  {['morning', 'afternoon', 'evening'].map(timeSlot => (
+                                    <label key={timeSlot} className="flex items-center gap-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={(editFormData.preferredTimeSlots || []).includes(timeSlot as any)}
+                                        onChange={(e) => {
+                                          const timeSlots = editFormData.preferredTimeSlots || [];
+                                          if (e.target.checked) {
+                                            setEditFormData({ ...editFormData, preferredTimeSlots: [...timeSlots, timeSlot as any] });
+                                          } else {
+                                            setEditFormData({ ...editFormData, preferredTimeSlots: timeSlots.filter(t => t !== timeSlot) });
+                                          }
+                                        }}
+                                      />
+                                      <span className="capitalize text-xs text-gray-700 dark:text-gray-300">{timeSlot}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Minimum session</label>
+                                <select
+                                  value={editFormData.minWorkBlock || 30}
+                                  onChange={(e) => setEditFormData({ ...editFormData, minWorkBlock: parseInt(e.target.value) })}
+                                  className="w-full px-2 py-1 border rounded text-sm bg-white dark:bg-gray-800 dark:text-white"
+                                >
+                                  <option value={15}>15 minutes</option>
+                                  <option value={30}>30 minutes</option>
+                                  <option value={45}>45 minutes</option>
+                                  <option value={60}>1 hour</option>
+                                  <option value={90}>1.5 hours</option>
+                                </select>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
                     {/* Warning for low-priority urgent tasks */}
                     {isLowPriorityUrgent && (
@@ -258,7 +471,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask, 
                         <span className="text-sm text-yellow-700 dark:text-yellow-300">
                           This task is due soon but marked as low priority. Consider increasing the priority.
                         </span>
-                        </div>
+                      </div>
                     )}
 
                     {/* Warning for past deadline */}
@@ -270,7 +483,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask, 
                         </span>
                       </div>
                     )}
-                    
+
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                       <button
                         onClick={saveEdit}
@@ -444,6 +657,66 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask, 
             ))}
           </div>
           )}
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl max-h-96 overflow-y-auto m-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Task Timeline Help</h3>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">Timeline Options Explained:</h4>
+
+                <div className="space-y-3">
+                  <div>
+                    <strong className="text-blue-600 dark:text-blue-400">Hard Deadline:</strong>
+                    <p>Task must be completed by the specified date. The app will prioritize these tasks and schedule them with urgency.</p>
+                  </div>
+
+                  <div>
+                    <strong className="text-green-600 dark:text-green-400">Flexible Target:</strong>
+                    <p>You have a goal date but it's not critical. The app will try to finish by this date but may extend if needed.</p>
+                  </div>
+
+                  <div>
+                    <strong className="text-purple-600 dark:text-purple-400">No Deadline:</strong>
+                    <p>Perfect for learning, hobbies, and personal development. The app schedules these tasks in available time slots without pressure.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">Task Importance & Scheduling Priority:</h4>
+                <div className="space-y-2">
+                  <div>
+                    <strong className="text-red-600 dark:text-red-400">High Impact Tasks:</strong>
+                    <p>Always scheduled first, regardless of deadline type. These tasks significantly affect your success and commitments.</p>
+                  </div>
+                  <div>
+                    <strong className="text-gray-600 dark:text-gray-400">Low Impact Tasks:</strong>
+                    <p>Scheduled after high impact tasks. Will be moved or postponed if schedule becomes tight.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
+                <p className="text-blue-800 dark:text-blue-200">
+                  <strong>Tip:</strong> Use high impact for tasks that significantly affect your goals, and low impact for routine or optional tasks!
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

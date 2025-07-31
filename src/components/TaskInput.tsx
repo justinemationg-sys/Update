@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Info } from 'lucide-react';
+import { Plus, Info, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Task } from '../types';
 
 interface TaskInputProps {
@@ -106,10 +106,18 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
     customCategory: '',
     impact: '', // 'high' or 'low'
     taskType: '',
-    // modifiers removed
+    // New fields for deadline flexibility
+    deadlineType: 'hard' as 'hard' | 'soft' | 'none',
+    schedulingPreference: 'consistent' as 'consistent' | 'opportunistic' | 'intensive',
+    targetFrequency: 'weekly' as 'daily' | 'weekly' | '3x-week' | 'flexible',
+    preferredTimeSlots: [] as ('morning' | 'afternoon' | 'evening')[],
+    minWorkBlock: 30, // Default 30 minutes
+    isOneTimeTask: false, // New field for one-time tasks
   });
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [showTimePresets, setShowTimePresets] = useState(false);
+  const [showTaskTimeline, setShowTaskTimeline] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [estBase, setEstBase] = useState(formData.estimatedHours || '1');
   // Remove estAdjusted state, use only local let estAdjusted
   const estimationHelperRef = useRef<HTMLDivElement>(null);
@@ -180,7 +188,8 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
   // Enhanced validation with better error messages
   const isTitleValid = formData.title.trim().length > 0;
   const isTitleLengthValid = formData.title.trim().length <= 100; // Max 100 characters
-  const isDeadlineValid = formData.deadline.trim().length > 0;
+  // Deadline is always optional now
+  const isDeadlineValid = true; // Always valid since deadline is optional
   const isDeadlineNotPast = formData.deadline ? formData.deadline >= today : true;
   const totalTime = convertToDecimalHours(formData.estimatedHours, formData.estimatedMinutes);
   const isEstimatedValid = totalTime > 0;
@@ -201,10 +210,8 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
       errors.push('Task title must be 100 characters or less');
     }
     
-    if (!isDeadlineValid) {
-      errors.push('Deadline');
-    } else if (!isDeadlineNotPast) {
-      errors.push('Deadline cannot be in the past');
+    if (!isDeadlineNotPast) {
+      errors.push('Date cannot be in the past');
     }
     
     if (!isEstimatedValid) {
@@ -251,13 +258,20 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
     onAddTask({
       title: formData.title,
       description: formData.description,
-      deadline: formData.deadline,
+      deadline: formData.deadline || '', // Use empty string if no deadline provided
       estimatedHours: decimalHours,
       category,
       impact: formData.impact,
       taskType: formData.taskType,
       status: 'pending',
       importance: formData.impact === 'high',
+      // New fields for deadline flexibility
+      deadlineType: formData.deadline ? formData.deadlineType : 'none',
+      schedulingPreference: formData.schedulingPreference,
+      targetFrequency: formData.targetFrequency,
+      preferredTimeSlots: formData.preferredTimeSlots,
+      minWorkBlock: formData.minWorkBlock,
+      isOneTimeTask: formData.isOneTimeTask,
     });
     setFormData({
       title: '',
@@ -269,6 +283,12 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
       customCategory: '',
       impact: '',
       taskType: '',
+      deadlineType: 'hard',
+      schedulingPreference: 'consistent',
+      targetFrequency: 'weekly',
+      preferredTimeSlots: [],
+      minWorkBlock: 30,
+      isOneTimeTask: false,
     });
     setShowEstimationHelper(false);
     setShowMoreOptions(false);
@@ -310,19 +330,165 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
             />
           </div>
             <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Deadline <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
-                  required
-                  min={today}
-                  value={formData.deadline}
+            {/* Simple deadline input with one-time task option */}
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Deadline <span className="text-gray-400">(Optional)</span></label>
+            <input
+              type="date"
+              min={today}
+              value={formData.deadline}
               onChange={e => setFormData(f => ({ ...f, deadline: e.target.value }))}
               className={`w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent border-gray-300 bg-white dark:bg-gray-800 dark:text-white ${!isDeadlineNotPast && formData.deadline ? 'border-red-500 focus:ring-red-500' : ''}`}
-                />
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">When is this due or when should this be finished by?</div>
+              placeholder="Select deadline (optional)"
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for flexible tasks, or set a deadline for time-sensitive work</div>
             {!isDeadlineNotPast && formData.deadline && (
               <div className="text-red-600 text-xs mt-1">Deadline cannot be in the past. Please select today or a future date.</div>
             )}
+
+            {/* One-time task option */}
+            <div className="mt-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.isOneTimeTask}
+                  onChange={e => setFormData(f => ({ ...f, isOneTimeTask: e.target.checked }))}
+                  className="text-blue-600"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-200">Complete this task in one sitting (don't divide into sessions)</span>
+              </label>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Check this for short tasks or tasks that need to be done all at once</div>
+            </div>
+
+            {/* Task Timeline Toggle Button */}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => setShowTaskTimeline(!showTaskTimeline)}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition-colors"
+              >
+                {showTaskTimeline ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                Advanced Timeline Options
+              </button>
+
+              {/* Task Timeline Section - Collapsible */}
+              {showTaskTimeline && (
+                <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Task Timeline Options</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowHelpModal(true)}
+                      className="text-gray-400 hover:text-blue-600 transition-colors"
+                      title="Help & Information"
+                    >
+                      <HelpCircle size={16} />
+                    </button>
+                  </div>
+
+                  {/* Deadline Type Selection */}
+                  <div className="space-y-2 mb-4">
+                    <label className="flex items-center gap-3 p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-white dark:hover:bg-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deadlineType"
+                        value="hard"
+                        checked={formData.deadlineType === 'hard'}
+                        onChange={() => setFormData(f => ({ ...f, deadlineType: 'hard' }))}
+                        className="text-blue-600"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-gray-800 dark:text-white">Hard deadline (must finish by date)</div>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-white dark:hover:bg-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deadlineType"
+                        value="soft"
+                        checked={formData.deadlineType === 'soft'}
+                        onChange={() => setFormData(f => ({ ...f, deadlineType: 'soft' }))}
+                        className="text-blue-600"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-gray-800 dark:text-white">Flexible target date</div>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-white dark:hover:bg-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deadlineType"
+                        value="none"
+                        checked={formData.deadlineType === 'none'}
+                        onChange={() => setFormData(f => ({ ...f, deadlineType: 'none' }))}
+                        className="text-blue-600"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-gray-800 dark:text-white">No deadline (work when time allows)</div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* No-deadline task preferences */}
+                  {formData.deadlineType === 'none' && (
+                    <div className="space-y-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Work frequency</label>
+                        <select
+                          value={formData.targetFrequency}
+                          onChange={e => setFormData(f => ({ ...f, targetFrequency: e.target.value as any }))}
+                          className="w-full px-2 py-1 border rounded text-sm bg-white dark:bg-gray-800 dark:text-white"
+                        >
+                          <option value="daily">Daily progress</option>
+                          <option value="3x-week">Few times per week</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="flexible">When I have time</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Preferred time</label>
+                        <div className="flex gap-2">
+                          {['morning', 'afternoon', 'evening'].map(timeSlot => (
+                            <label key={timeSlot} className="flex items-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={formData.preferredTimeSlots.includes(timeSlot as any)}
+                                onChange={e => {
+                                  const timeSlots = formData.preferredTimeSlots;
+                                  if (e.target.checked) {
+                                    setFormData(f => ({ ...f, preferredTimeSlots: [...timeSlots, timeSlot as any] }));
+                                  } else {
+                                    setFormData(f => ({ ...f, preferredTimeSlots: timeSlots.filter(t => t !== timeSlot) }));
+                                  }
+                                }}
+                              />
+                              <span className="capitalize text-xs text-gray-700 dark:text-gray-300">{timeSlot}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Minimum session</label>
+                        <select
+                          value={formData.minWorkBlock}
+                          onChange={e => setFormData(f => ({ ...f, minWorkBlock: parseInt(e.target.value) }))}
+                          className="w-full px-2 py-1 border rounded text-sm bg-white dark:bg-gray-800 dark:text-white"
+                        >
+                          <option value={15}>15 minutes</option>
+                          <option value={30}>30 minutes</option>
+                          <option value={45}>45 minutes</option>
+                          <option value={60}>1 hour</option>
+                          <option value={90}>1.5 hours</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
               </div>
             </div>
         {/* Description */}
@@ -660,6 +826,12 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
                 customCategory: '',
                 impact: '',
                 taskType: '',
+                deadlineType: 'hard',
+                schedulingPreference: 'consistent',
+                targetFrequency: 'weekly',
+                preferredTimeSlots: [],
+                minWorkBlock: 30,
+                isOneTimeTask: false,
               });
               setShowEstimationHelper(false);
               setShowMoreOptions(false);
@@ -672,6 +844,91 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
           </div>
         </form>
       </div>
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl max-h-96 overflow-y-auto m-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Task Timeline Help</h3>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">Timeline Options Explained:</h4>
+
+                <div className="space-y-3">
+                  <div>
+                    <strong className="text-blue-600 dark:text-blue-400">Hard Deadline:</strong>
+                    <p>Task must be completed by the specified date. The app will prioritize these tasks and schedule them with urgency.</p>
+                  </div>
+
+                  <div>
+                    <strong className="text-green-600 dark:text-green-400">Flexible Target:</strong>
+                    <p>You have a goal date but it's not critical. The app will try to finish by this date but may extend if needed.</p>
+                  </div>
+
+                  <div>
+                    <strong className="text-purple-600 dark:text-purple-400">No Deadline:</strong>
+                    <p>Perfect for learning, hobbies, and personal development. The app schedules these tasks in available time slots without pressure.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">How No-Deadline Tasks Work:</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  <li><strong>Fill available time:</strong> Scheduled after deadline tasks are placed</li>
+                  <li><strong>Consistent progress:</strong> Spread across days based on your frequency preference</li>
+                  <li><strong>Flexible scheduling:</strong> Can be moved or skipped without affecting critical deadlines</li>
+                  <li><strong>Respect preferences:</strong> Uses your preferred time slots and session lengths</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">One-Time Tasks:</h4>
+                <p>Check "Complete in one sitting" for tasks that shouldn't be divided into multiple sessions. Perfect for short tasks, meetings, or work that needs to be done all at once.</p>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">Task Importance & Scheduling Priority:</h4>
+                <div className="space-y-2">
+                  <div>
+                    <strong className="text-red-600 dark:text-red-400">High Impact Tasks:</strong>
+                    <p>Always scheduled first, regardless of deadline type. These tasks significantly affect your success and commitments.</p>
+                  </div>
+                  <div>
+                    <strong className="text-gray-600 dark:text-gray-400">Low Impact Tasks:</strong>
+                    <p>Scheduled after high impact tasks. Will be moved or postponed if schedule becomes tight.</p>
+                  </div>
+                  <div className="bg-amber-50 dark:bg-amber-900/30 p-2 rounded text-sm">
+                    <strong>Smart Scheduling Order:</strong>
+                    <ol className="list-decimal list-inside mt-1 space-y-1">
+                      <li>High impact + hard deadline (urgent & important)</li>
+                      <li>High impact + flexible/no deadline (important but not urgent)</li>
+                      <li>Low impact + hard deadline (urgent but not important)</li>
+                      <li>Low impact + flexible/no deadline (neither urgent nor important)</li>
+                    </ol>
+                  </div>
+                  <p className="text-sm"><strong>One-time tasks</strong> maintain their importance level but are scheduled as single, uninterrupted sessions.</p>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
+                <p className="text-blue-800 dark:text-blue-200">
+                  <strong>Tip:</strong> Use high impact for tasks that significantly affect your goals, and low impact for routine or optional tasks. The app will automatically prioritize your schedule!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
