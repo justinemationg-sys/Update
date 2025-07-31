@@ -850,6 +850,67 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
           </div>
         </form>
       </div>
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl max-h-96 overflow-y-auto m-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Task Timeline Help</h3>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">Timeline Options Explained:</h4>
+
+                <div className="space-y-3">
+                  <div>
+                    <strong className="text-blue-600 dark:text-blue-400">Hard Deadline:</strong>
+                    <p>Task must be completed by the specified date. The app will prioritize these tasks and schedule them with urgency.</p>
+                  </div>
+
+                  <div>
+                    <strong className="text-green-600 dark:text-green-400">Flexible Target:</strong>
+                    <p>You have a goal date but it's not critical. The app will try to finish by this date but may extend if needed.</p>
+                  </div>
+
+                  <div>
+                    <strong className="text-purple-600 dark:text-purple-400">No Deadline:</strong>
+                    <p>Perfect for learning, hobbies, and personal development. The app schedules these tasks in available time slots without pressure.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">How No-Deadline Tasks Work:</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  <li><strong>Fill available time:</strong> Scheduled after deadline tasks are placed</li>
+                  <li><strong>Consistent progress:</strong> Spread across days based on your frequency preference</li>
+                  <li><strong>Flexible scheduling:</strong> Can be moved or skipped without affecting critical deadlines</li>
+                  <li><strong>Respect preferences:</strong> Uses your preferred time slots and session lengths</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-800 dark:text-white mb-2">One-Time Tasks:</h4>
+                <p>Check "Complete in one sitting" for tasks that shouldn't be divided into multiple sessions. Perfect for short tasks, meetings, or work that needs to be done all at once.</p>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
+                <p className="text-blue-800 dark:text-blue-200">
+                  <strong>Tip:</strong> Start with simple deadline tasks, then explore advanced options as you get comfortable with the app!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
