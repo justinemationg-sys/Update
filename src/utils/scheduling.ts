@@ -1175,6 +1175,62 @@ export const generateNewStudyPlan = (
     }
   }
 
+  // Schedule no-deadline tasks in remaining available time
+  if (noDeadlineTasksEisen.length > 0) {
+    noDeadlineTasksEisen.forEach(task => {
+      let remainingHours = task.estimatedHours;
+      const minSessionHours = (task.minWorkBlock || 30) / 60;
+      let sessionNumber = 1;
+
+      for (const plan of studyPlans) {
+        if (remainingHours <= 0) break;
+
+        const usedHours = plan.plannedTasks.reduce((sum, session) => sum + session.allocatedHours, 0);
+        const availableHours = plan.availableHours - usedHours;
+
+        if (availableHours >= minSessionHours) {
+          const sessionHours = Math.min(remainingHours, availableHours, 1.5);
+
+          // Find available time slot
+          const commitmentsForDay = fixedCommitments.filter(commitment =>
+            doesCommitmentApplyToDate(commitment, plan.date)
+          );
+
+          const slot = findAvailableTimeSlot(
+            sessionHours,
+            plan.plannedTasks,
+            commitmentsForDay,
+            settings.studyWindowStartHour || 6,
+            settings.studyWindowEndHour || 23,
+            settings.bufferTimeBetweenSessions || 0,
+            plan.date
+          );
+
+          if (slot) {
+            const session: StudySession = {
+              taskId: task.id,
+              scheduledTime: `${plan.date} ${slot.start}`,
+              startTime: slot.start,
+              endTime: slot.end,
+              allocatedHours: sessionHours,
+              sessionNumber,
+              isFlexible: true,
+              status: 'scheduled'
+            };
+
+            plan.plannedTasks.push(session);
+            plan.totalStudyHours += sessionHours;
+            remainingHours -= sessionHours;
+            sessionNumber++;
+          }
+        }
+      }
+
+      // Add to task scheduled hours tracking
+      taskScheduledHours[task.id] = (taskScheduledHours[task.id] || 0) + (task.estimatedHours - remainingHours);
+    });
+  }
+
   // After all days, add suggestions for any unscheduled hours
   const suggestions = getUnscheduledMinutesForTasks(tasksSorted, taskScheduledHours, settings);
   return { plans: studyPlans, suggestions };
