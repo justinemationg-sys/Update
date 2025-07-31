@@ -277,6 +277,7 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
       targetFrequency: formData.targetFrequency,
       preferredTimeSlots: formData.preferredTimeSlots,
       minWorkBlock: formData.minWorkBlock,
+      isOneTimeTask: formData.isOneTimeTask,
     });
     setFormData({
       title: '',
