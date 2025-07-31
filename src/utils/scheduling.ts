@@ -105,6 +105,11 @@ const optimizeSessionDistribution = (task: Task, totalHours: number, daysForTask
   const minSessionLength = (settings.minSessionLength || 15) / 60; // in hours
   const maxSessionLength = Math.min(4, settings.dailyAvailableHours); // Cap at 4 hours or daily limit
 
+  // For one-time tasks, return a single session with all hours
+  if (task.isOneTimeTask) {
+    return [totalHours];
+  }
+
   // Try to create fewer, larger sessions
   let optimalSessions: number[] = [];
   let remainingHours = totalHours;
