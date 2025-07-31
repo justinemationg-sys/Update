@@ -316,18 +316,131 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
             />
           </div>
             <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Deadline <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Task Timeline</label>
+
+            {/* Deadline Type Selection */}
+            <div className="space-y-3 mb-4">
+              <label className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                <input
+                  type="radio"
+                  name="deadlineType"
+                  value="hard"
+                  checked={formData.deadlineType === 'hard'}
+                  onChange={() => setFormData(f => ({ ...f, deadlineType: 'hard' }))}
+                  className="text-blue-600"
+                />
+                <div>
+                  <div className="font-medium text-gray-800 dark:text-white">Must be completed by specific date</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">For assignments, deadlines, important commitments</div>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                <input
+                  type="radio"
+                  name="deadlineType"
+                  value="soft"
+                  checked={formData.deadlineType === 'soft'}
+                  onChange={() => setFormData(f => ({ ...f, deadlineType: 'soft' }))}
+                  className="text-blue-600"
+                />
+                <div>
+                  <div className="font-medium text-gray-800 dark:text-white">Target completion date (flexible)</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Goal to finish by this date, but can be adjusted</div>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                <input
+                  type="radio"
+                  name="deadlineType"
+                  value="none"
+                  checked={formData.deadlineType === 'none'}
+                  onChange={() => setFormData(f => ({ ...f, deadlineType: 'none' }))}
+                  className="text-blue-600"
+                />
+                <div>
+                  <div className="font-medium text-gray-800 dark:text-white">No deadline - work when time allows</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">For learning, hobbies, personal development</div>
+                </div>
+              </label>
+            </div>
+
+            {/* Date Input - only show for hard and soft deadlines */}
+            {formData.deadlineType !== 'none' && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  {formData.deadlineType === 'hard' ? 'Deadline Date' : 'Target Date'} <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="date"
-                  required
+                  required={formData.deadlineType !== 'none'}
                   min={today}
                   value={formData.deadline}
-              onChange={e => setFormData(f => ({ ...f, deadline: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent border-gray-300 bg-white dark:bg-gray-800 dark:text-white ${!isDeadlineNotPast && formData.deadline ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  onChange={e => setFormData(f => ({ ...f, deadline: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent border-gray-300 bg-white dark:bg-gray-800 dark:text-white ${!isDeadlineNotPast && formData.deadline ? 'border-red-500 focus:ring-red-500' : ''}`}
                 />
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">When is this due or when should this be finished by?</div>
-            {!isDeadlineNotPast && formData.deadline && (
-              <div className="text-red-600 text-xs mt-1">Deadline cannot be in the past. Please select today or a future date.</div>
+                {!isDeadlineNotPast && formData.deadline && (
+                  <div className="text-red-600 text-xs mt-1">Date cannot be in the past. Please select today or a future date.</div>
+                )}
+              </div>
+            )}
+
+            {/* No-deadline task preferences */}
+            {formData.deadlineType === 'none' && (
+              <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">How often would you like to work on this?</label>
+                  <select
+                    value={formData.targetFrequency}
+                    onChange={e => setFormData(f => ({ ...f, targetFrequency: e.target.value as any }))}
+                    className="w-full px-3 py-2 border rounded-lg text-base bg-white dark:bg-gray-800 dark:text-white"
+                  >
+                    <option value="daily">A little bit daily (consistent progress)</option>
+                    <option value="3x-week">Few times per week (regular practice)</option>
+                    <option value="weekly">Once or twice per week (steady pace)</option>
+                    <option value="flexible">When I have extra time (opportunistic)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Preferred time of day (optional)</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['morning', 'afternoon', 'evening'].map(timeSlot => (
+                      <label key={timeSlot} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.preferredTimeSlots.includes(timeSlot as any)}
+                          onChange={e => {
+                            const timeSlots = formData.preferredTimeSlots;
+                            if (e.target.checked) {
+                              setFormData(f => ({ ...f, preferredTimeSlots: [...timeSlots, timeSlot as any] }));
+                            } else {
+                              setFormData(f => ({ ...f, preferredTimeSlots: timeSlots.filter(t => t !== timeSlot) }));
+                            }
+                          }}
+                        />
+                        <span className="capitalize text-sm text-gray-700 dark:text-gray-300">{timeSlot}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Minimum work session length</label>
+                  <select
+                    value={formData.minWorkBlock}
+                    onChange={e => setFormData(f => ({ ...f, minWorkBlock: parseInt(e.target.value) }))}
+                    className="w-full px-3 py-2 border rounded-lg text-base bg-white dark:bg-gray-800 dark:text-white"
+                  >
+                    <option value={15}>15 minutes (quick practice)</option>
+                    <option value={30}>30 minutes (focused session)</option>
+                    <option value={45}>45 minutes (deep work)</option>
+                    <option value={60}>1 hour (intensive session)</option>
+                    <option value={90}>1.5 hours (extended work)</option>
+                  </select>
+                </div>
+              </div>
             )}
               </div>
             </div>
