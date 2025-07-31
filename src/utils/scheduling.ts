@@ -1141,7 +1141,15 @@ export const generateNewStudyPlan = (
       const remainingTaskHours = task.estimatedHours - taskScheduledHours[task.id];
       if (remainingTaskHours <= 0) continue;
       // Allocate as much as possible for this task
-      const hoursToSchedule = Math.min(remainingTaskHours, availableHours);
+      // For one-time tasks, schedule all remaining hours at once if possible
+      let hoursToSchedule;
+      if (task.isOneTimeTask && taskScheduledHours[task.id] === 0) {
+        // One-time task: try to schedule all hours at once
+        hoursToSchedule = remainingTaskHours <= availableHours ? remainingTaskHours : 0;
+      } else {
+        // Regular task: can be split across sessions
+        hoursToSchedule = Math.min(remainingTaskHours, availableHours);
+      }
       if (hoursToSchedule > 0) {
         // Find the next available time slot for this session
         const existingSessions = dayPlan.plannedTasks;
