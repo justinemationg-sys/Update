@@ -381,7 +381,7 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Task Timeline Options</span>
                     <button
                       type="button"
-                      onClick={() => setShowTaskTimeline(false)}
+                      onClick={() => setShowHelpModal(true)}
                       className="text-gray-400 hover:text-blue-600 transition-colors"
                       title="Help & Information"
                     >
