@@ -790,6 +790,11 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
                 customCategory: '',
                 impact: '',
                 taskType: '',
+                deadlineType: 'hard',
+                schedulingPreference: 'consistent',
+                targetFrequency: 'weekly',
+                preferredTimeSlots: [],
+                minWorkBlock: 30,
               });
               setShowEstimationHelper(false);
               setShowMoreOptions(false);
