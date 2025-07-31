@@ -257,13 +257,19 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
     onAddTask({
       title: formData.title,
       description: formData.description,
-      deadline: formData.deadline,
+      deadline: formData.deadlineType === 'none' ? '' : formData.deadline,
       estimatedHours: decimalHours,
       category,
       impact: formData.impact,
       taskType: formData.taskType,
       status: 'pending',
       importance: formData.impact === 'high',
+      // New fields for deadline flexibility
+      deadlineType: formData.deadlineType,
+      schedulingPreference: formData.schedulingPreference,
+      targetFrequency: formData.targetFrequency,
+      preferredTimeSlots: formData.preferredTimeSlots,
+      minWorkBlock: formData.minWorkBlock,
     });
     setFormData({
       title: '',
