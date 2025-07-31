@@ -337,16 +337,16 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
           </div>
             <div>
             {/* Simple deadline input with one-time task option */}
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Deadline <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Deadline <span className="text-gray-400">(Optional)</span></label>
             <input
               type="date"
-              required={formData.deadlineType !== 'none'}
               min={today}
               value={formData.deadline}
               onChange={e => setFormData(f => ({ ...f, deadline: e.target.value }))}
               className={`w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent border-gray-300 bg-white dark:bg-gray-800 dark:text-white ${!isDeadlineNotPast && formData.deadline ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="Select deadline (optional)"
             />
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">When is this due or when should this be finished by?</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for flexible tasks, or set a deadline for time-sensitive work</div>
             {!isDeadlineNotPast && formData.deadline && (
               <div className="text-red-600 text-xs mt-1">Deadline cannot be in the past. Please select today or a future date.</div>
             )}
