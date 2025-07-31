@@ -258,7 +258,7 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
     onAddTask({
       title: formData.title,
       description: formData.description,
-      deadline: formData.deadlineType === 'none' ? '' : formData.deadline,
+      deadline: formData.deadline || '', // Use empty string if no deadline provided
       estimatedHours: decimalHours,
       category,
       impact: formData.impact,
