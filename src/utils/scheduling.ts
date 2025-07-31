@@ -1000,7 +1000,15 @@ export const generateNewStudyPlan = (
           const availableHours = plan.availableHours - usedHours;
 
           if (availableHours >= minSessionHours) {
-            const sessionHours = Math.min(remainingHours, availableHours, 1.5); // Max 1.5 hours per session
+            // For one-time tasks, try to schedule all remaining hours at once
+            let sessionHours;
+            if (task.isOneTimeTask && sessionNumber === 1) {
+              sessionHours = remainingHours <= availableHours ? remainingHours : 0;
+            } else {
+              sessionHours = Math.min(remainingHours, availableHours, 1.5); // Max 1.5 hours per session
+            }
+
+            if (sessionHours <= 0) continue;
 
             const startTimeHour = 9 + (usedHours % 8);
             const endTimeHour = startTimeHour + sessionHours;
