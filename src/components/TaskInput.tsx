@@ -188,8 +188,8 @@ const TaskInput: React.FC<TaskInputProps> = ({ onAddTask, onCancel }) => {
   // Enhanced validation with better error messages
   const isTitleValid = formData.title.trim().length > 0;
   const isTitleLengthValid = formData.title.trim().length <= 100; // Max 100 characters
-  // Deadline validation based on deadline type
-  const isDeadlineValid = formData.deadlineType === 'none' || formData.deadline.trim().length > 0;
+  // Deadline is always optional now
+  const isDeadlineValid = true; // Always valid since deadline is optional
   const isDeadlineNotPast = formData.deadline ? formData.deadline >= today : true;
   const totalTime = convertToDecimalHours(formData.estimatedHours, formData.estimatedMinutes);
   const isEstimatedValid = totalTime > 0;
