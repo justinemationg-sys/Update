@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Info } from 'lucide-react';
+import { Plus, Info, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Task } from '../types';
 
 interface TaskInputProps {
