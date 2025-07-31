@@ -797,7 +797,7 @@ export const generateNewStudyPlan = (
     const allPendingTasksBalanced = tasks.filter(task => task.status === 'pending' && task.estimatedHours > 0);
 
     const deadlineTasksBalanced = allPendingTasksBalanced
-      .filter(task => !task.deadlineType || task.deadlineType !== 'none')
+      .filter(task => task.deadline && task.deadline.trim().length > 0 && task.deadlineType !== 'none')
       .sort((a, b) => {
         // First sort by importance
         if (a.importance !== b.importance) return a.importance ? -1 : 1;
@@ -806,7 +806,7 @@ export const generateNewStudyPlan = (
       });
 
     const noDeadlineTasksBalanced = allPendingTasksBalanced
-      .filter(task => task.deadlineType === 'none')
+      .filter(task => !task.deadline || task.deadline.trim().length === 0 || task.deadlineType === 'none')
       .sort((a, b) => {
         if (a.importance !== b.importance) return a.importance ? -1 : 1; // Important first
         return a.title.localeCompare(b.title); // Then alphabetically
