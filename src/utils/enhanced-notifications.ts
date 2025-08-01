@@ -53,9 +53,9 @@ export function getAccurateUnscheduledTasks(
   
   studyPlans.forEach(plan => {
     plan.plannedTasks.forEach(session => {
-      // Only count sessions that were originally scheduled (not redistributed)
-      // and are not skipped
-      if (session.status !== 'skipped' && !isRedistributedSession(session)) {
+      // Count all sessions that are not skipped (including redistributed ones)
+      // Redistributed sessions still represent scheduled work that has been allocated time slots
+      if (session.status !== 'skipped') {
         taskScheduledHours[session.taskId] = (taskScheduledHours[session.taskId] || 0) + session.allocatedHours;
       }
     });
