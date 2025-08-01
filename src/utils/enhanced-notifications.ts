@@ -38,7 +38,7 @@ export interface NotificationSummary {
 
 /**
  * Calculates truly unscheduled hours from actual study plan generation
- * Excludes missed, skipped, and rescheduled sessions from the calculation
+ * Excludes only skipped sessions from the calculation (redistributed sessions count as scheduled)
  */
 export function getAccurateUnscheduledTasks(
   tasks: Task[],
@@ -48,14 +48,14 @@ export function getAccurateUnscheduledTasks(
   const today = new Date().toISOString().split('T')[0];
   const unscheduledTasks: UnscheduledTaskNotification[] = [];
 
-  // Calculate scheduled hours per task from ONLY originally scheduled sessions
+  // Calculate scheduled hours per task from all non-skipped sessions (including redistributed ones)
   const taskScheduledHours: Record<string, number> = {};
   
   studyPlans.forEach(plan => {
     plan.plannedTasks.forEach(session => {
-      // Only count sessions that were originally scheduled (not redistributed)
-      // and are not skipped
-      if (session.status !== 'skipped' && !isRedistributedSession(session)) {
+      // Count all sessions that are not skipped (including redistributed ones)
+      // Redistributed sessions still represent scheduled work that has been allocated time slots
+      if (session.status !== 'skipped') {
         taskScheduledHours[session.taskId] = (taskScheduledHours[session.taskId] || 0) + session.allocatedHours;
       }
     });
