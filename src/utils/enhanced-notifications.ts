@@ -38,7 +38,7 @@ export interface NotificationSummary {
 
 /**
  * Calculates truly unscheduled hours from actual study plan generation
- * Excludes missed, skipped, and rescheduled sessions from the calculation
+ * Excludes only skipped sessions from the calculation (redistributed sessions count as scheduled)
  */
 export function getAccurateUnscheduledTasks(
   tasks: Task[],
