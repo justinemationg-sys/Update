@@ -48,7 +48,7 @@ export function getAccurateUnscheduledTasks(
   const today = new Date().toISOString().split('T')[0];
   const unscheduledTasks: UnscheduledTaskNotification[] = [];
 
-  // Calculate scheduled hours per task from ONLY originally scheduled sessions
+  // Calculate scheduled hours per task from all non-skipped sessions (including redistributed ones)
   const taskScheduledHours: Record<string, number> = {};
   
   studyPlans.forEach(plan => {
